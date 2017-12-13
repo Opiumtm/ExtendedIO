@@ -10,12 +10,12 @@ namespace Ipatov.CoreDb.Core
         /// <summary>
         /// Page address.
         /// </summary>
-        public PageAddress Address;
+        public readonly PageAddress Address;
 
         /// <summary>
         /// Page data.
         /// </summary>
-        public byte[] PageData;
+        public readonly byte[] PageData;
 
         /// <summary>
         /// Constructor.
