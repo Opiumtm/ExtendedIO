@@ -11,7 +11,17 @@ namespace Ipatov.CoreDb.Core
         /// <summary>
         /// Page size in bytes.
         /// </summary>
-        int PageSize { get; }
+        uint PageSize { get; }
+
+        /// <summary>
+        /// Implementation flags.
+        /// </summary>
+        PagingStoreImplementationFlags ImplementationFlags { get; }
+
+        /// <summary>
+        /// Total allocated pages.
+        /// </summary>
+        ValueTask<uint> GetTotalPages();
 
         /// <summary>
         /// Read pages.
@@ -31,14 +41,14 @@ namespace Ipatov.CoreDb.Core
         /// Allocate new pages.
         /// </summary>
         /// <param name="count">Count of pages to allocate.</param>
-        /// <returns>Reserved page addresses.</returns>
-        Task<PageAddress[]> AllocatePages(int count);
+        /// <returns>New page addresses.</returns>
+        Task<PageAddress[]> AllocatePages(uint count);
 
         /// <summary>
-        /// Deallocate pages.
+        /// Trim size. Do noting if size is already too small.
         /// </summary>
-        /// <param name="addresses">Addresses of pages to deallocate.</param>
+        /// <param name="newSize">New size.</param>
         /// <returns>Completion task.</returns>
-        Task DeallocatePages(params PageAddress[] addresses);
+        Task TrimSize(uint newSize);
     }
 }

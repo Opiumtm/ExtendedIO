@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Ipatov.CoreDb.Core
+namespace Ipatov.CoreDb.Core.Errors
 {
     /// <summary>
     /// Page I/O exception.

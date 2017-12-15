@@ -1,26 +1,31 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Ipatov.CoreDb.Core.Errors;
 
 namespace Ipatov.CoreDb.Core
 {
     /// <summary>
     /// Stream-based page store.
     /// </summary>
+    /// <remarks>No synchronization locks provided. Callers should provide their own access synchronization.</remarks>
     public sealed class StreamPageStore : IPagedRandomAccessStore
     {
         private readonly Stream _stream;
-
-        private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="pageSize">Page size.</param>
         /// <param name="stream">Underlying stream. Would be disposed automatically.</param>
-        public StreamPageStore(int pageSize, Stream stream)
+        public StreamPageStore(uint pageSize, Stream stream)
         {
+            if (pageSize < 1 || pageSize > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pageSize));
+            }
             PageSize = pageSize;
             _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         }
@@ -30,22 +35,65 @@ namespace Ipatov.CoreDb.Core
         public void Dispose()
         {
             _stream.Dispose();
-            _lock.Dispose();
         }
 
         /// <summary>
         /// Page size in bytes.
         /// </summary>
-        public int PageSize { get; }
+        public uint PageSize { get; }
+
+        /// <summary>
+        /// Implementation flags.
+        /// </summary>
+        public PagingStoreImplementationFlags ImplementationFlags => 0;
+
+        /// <summary>
+        /// Total allocated pages.
+        /// </summary>
+        public ValueTask<uint> GetTotalPages()
+        {
+            return new ValueTask<uint>(TotalPages);
+        }
+
+        /// <summary>
+        /// Total allocated pages.
+        /// </summary>
+        private uint TotalPages => (uint) (_stream.Length / PageSize);
 
         /// <summary>
         /// Read pages.
         /// </summary>
         /// <param name="addresses">Page adresses to read.</param>
         /// <returns>Retrieved pages.</returns>
-        public Task<DataPage[]> ReadPages(params PageAddress[] addresses)
+        public async Task<DataPage[]> ReadPages(params PageAddress[] addresses)
         {
-            throw new NotImplementedException();
+            if (addresses == null) throw new ArgumentNullException(nameof(addresses));
+            var result = new DataPage[addresses.Length];
+            for (var i = 0; i < addresses.Length; i++)
+            {
+                var page = addresses[i];
+                long ofs = (long)page.PageIndex * PageSize;
+                long ofs2 = ofs + PageSize - 1;
+                if (_stream.Length >= ofs2)
+                {
+                    try
+                    {
+                        var buf = new byte[PageSize];
+                        _stream.Seek(ofs, SeekOrigin.Begin);
+                        await _stream.ReadAsync(buf, 0, (int)PageSize);
+                        result[i] = new DataPage(page, buf);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PageIoReadException(e.Message, e, page);
+                    }
+                }
+                else
+                {
+                    throw new PageIoReadOutOfRangeException(page);
+                }
+            }
+            return result;
         }
 
         /// <summary>
@@ -53,29 +101,78 @@ namespace Ipatov.CoreDb.Core
         /// </summary>
         /// <param name="pages">Pages array.</param>
         /// <returns>Completion task.</returns>
-        public Task WritePages(params DataPage[] pages)
+        public async Task WritePages(params DataPage[] pages)
         {
-            throw new NotImplementedException();
+            if (pages == null) throw new ArgumentNullException(nameof(pages));
+            foreach (var page in pages)
+            {
+                long ofs = (long)page.Address.PageIndex * PageSize;
+                if ((ofs + PageSize - 1) >= _stream.Length)
+                {
+                    throw new PageIoWriteOutOfRangeException(page.Address);
+                }
+                if (page.PageData == null)
+                {
+                    throw new PageIoWriteInvalidDataException(PageIoWriteInvalidDataException.PageDataIsNullMessage, page.Address);
+                }
+                if (page.PageData.Length != PageSize)
+                {
+                    throw new PageIoWriteInvalidDataException(string.Format(PageIoWriteInvalidDataException.PageDataInvalidSize, PageSize), page.Address);
+                }
+                try
+                {
+                    await _stream.WriteAsync(page.PageData, 0, (int)PageSize);
+                }
+                catch (Exception e)
+                {
+                    throw new PageIoWriteException(e.Message, e, page.Address);
+                }
+            }
         }
 
         /// <summary>
         /// Allocate new pages.
         /// </summary>
         /// <param name="count">Count of pages to allocate.</param>
-        /// <returns>Reserved page addresses.</returns>
-        public Task<PageAddress[]> AllocatePages(int count)
+        /// <returns>New page addresses.</returns>
+        public Task<PageAddress[]> AllocatePages(uint count)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var result = new PageAddress[count];
+                var lp = TotalPages;
+                _stream.SetLength(TotalPages + count * PageSize);
+                for (uint i = 0; i < count; i++)
+                {
+                    result[i] = new PageAddress(0, lp + i);
+                }
+                return Task.FromResult(result);
+            }
+            catch (Exception e)
+            {
+                return Task.FromException<PageAddress[]>(new PageIoWriteException(e.Message, e, null));
+            }
         }
 
         /// <summary>
-        /// Deallocate pages.
+        /// Trim size. Do noting if size is already too small.
         /// </summary>
-        /// <param name="addresses">Addresses of pages to deallocate.</param>
+        /// <param name="newSize">New size.</param>
         /// <returns>Completion task.</returns>
-        public Task DeallocatePages(params PageAddress[] addresses)
+        public Task TrimSize(uint newSize)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (newSize < TotalPages)
+                {
+                    _stream.SetLength(newSize * PageSize);
+                }
+                return Task.CompletedTask;
+            }
+            catch (Exception e)
+            {
+                return Task.FromException<PageAddress[]>(new PageIoWriteException(e.Message, e, null));
+            }
         }
     }
 }
