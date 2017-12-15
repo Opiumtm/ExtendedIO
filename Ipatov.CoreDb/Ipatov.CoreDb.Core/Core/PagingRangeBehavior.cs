@@ -69,25 +69,5 @@ namespace Ipatov.CoreDb.Core
         {
             return UnderlyingStore.WritePages(pages);
         }
-
-        /// <summary>
-        /// Allocate new pages.
-        /// </summary>
-        /// <param name="count">Count of pages to allocate.</param>
-        /// <returns>New page addresses.</returns>
-        public virtual Task<PageAddress[]> AllocatePages(uint count)
-        {
-            return UnderlyingStore.AllocatePages(count);
-        }
-
-        /// <summary>
-        /// Trim size. Do noting if size is already too small.
-        /// </summary>
-        /// <param name="newSize">New size.</param>
-        /// <returns>Completion task.</returns>
-        public virtual Task TrimSize(uint newSize)
-        {
-            return UnderlyingStore.TrimSize(newSize);
-        }
     }
 }

@@ -13,7 +13,7 @@ namespace Ipatov.CoreDb.Core
         public readonly PageAddress Address;
 
         /// <summary>
-        /// Page data.
+        /// Page data. Deallocate page if null.
         /// </summary>
         public readonly byte[] PageData;
 

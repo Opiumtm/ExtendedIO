@@ -76,32 +76,6 @@ namespace Ipatov.CoreDb.Core.Locks
         }
 
         /// <summary>
-        /// Allocate new pages.
-        /// </summary>
-        /// <param name="count">Count of pages to allocate.</param>
-        /// <returns>New page addresses.</returns>
-        public override async Task<PageAddress[]> AllocatePages(uint count)
-        {
-            using (await LockProvider.Lock(PageLockType.Write, null, Timeout))
-            {
-                return await base.AllocatePages(count);
-            }
-        }
-
-        /// <summary>
-        /// Trim size. Do noting if size is already too small.
-        /// </summary>
-        /// <param name="newSize">New size.</param>
-        /// <returns>Completion task.</returns>
-        public override async Task TrimSize(uint newSize)
-        {
-            using (await LockProvider.Lock(PageLockType.Write, null, Timeout))
-            {
-                await base.AllocatePages(newSize);
-            }
-        }
-
-        /// <summary>
         /// Locking provider.
         /// </summary>
         IPageLockProvider IPageLockingBehavior.LockProvider => LockProvider;

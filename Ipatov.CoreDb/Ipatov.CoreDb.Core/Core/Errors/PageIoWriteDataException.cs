@@ -8,11 +8,6 @@ namespace Ipatov.CoreDb.Core.Errors
     public class PageIoWriteInvalidDataException : PageIoException
     {
         /// <summary>
-        /// Page data is null.
-        /// </summary>
-        public static string PageDataIsNullMessage = "Page data is null.";
-
-        /// <summary>
         /// Invalid page data size.
         /// </summary>
         public static string PageDataInvalidSize = "Invalid page data size. Valid page size is {0}.";

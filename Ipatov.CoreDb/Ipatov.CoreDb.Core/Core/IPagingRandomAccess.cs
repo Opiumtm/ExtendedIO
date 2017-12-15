@@ -36,19 +36,5 @@ namespace Ipatov.CoreDb.Core
         /// <param name="pages">Pages array.</param>
         /// <returns>Completion task.</returns>
         Task WritePages(params DataPage[] pages);
-
-        /// <summary>
-        /// Allocate new pages.
-        /// </summary>
-        /// <param name="count">Count of pages to allocate.</param>
-        /// <returns>New page addresses.</returns>
-        Task<PageAddress[]> AllocatePages(uint count);
-
-        /// <summary>
-        /// Trim size. Do noting if size is already too small.
-        /// </summary>
-        /// <param name="newSize">New size.</param>
-        /// <returns>Completion task.</returns>
-        Task TrimSize(uint newSize);
     }
 }
