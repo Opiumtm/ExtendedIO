@@ -17,8 +17,7 @@ namespace Ipatov.CoreDb.Core
 
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
-        private readonly List<bool> _allocatedBlocks = new List<bool>();
-
+        private int _totalPages;
 
         /// <summary>
         /// Constructor.
@@ -57,13 +56,8 @@ namespace Ipatov.CoreDb.Core
         /// </summary>
         public ValueTask<uint> GetTotalPages()
         {
-            return new ValueTask<uint>(TotalPages);
+            return new ValueTask<uint>((uint)Interlocked.CompareExchange(ref _totalPages, 0, 0));
         }
-
-        /// <summary>
-        /// Total allocated pages.
-        /// </summary>
-        private uint TotalPages => (uint) (_stream.Length / PageSize);
 
         /// <summary>
         /// Read pages.
@@ -116,46 +110,45 @@ namespace Ipatov.CoreDb.Core
         /// <returns>Completion task.</returns>
         public async Task WritePages(params DataPage[] pages)
         {
-            await _lock.WaitAsync();
+            await _lock.WaitAsync(TimeSpan.FromSeconds(30));
             try
             {
+                if (pages == null) throw new ArgumentNullException(nameof(pages));
+                foreach (var page in pages)
+                {
+                    long ofs = (long)page.Address.PageIndex * PageSize;
+                    if ((ofs + PageSize - 1) >= _stream.Length)
+                    {
+                        throw new PageIoWriteOutOfRangeException(page.Address);
+                    }
+                    if (page.PageData == null)
+                    {
+                        try
+                        {
 
-            }
-            finally
-            {
-                
-            }
-            if (pages == null) throw new ArgumentNullException(nameof(pages));
-            foreach (var page in pages)
-            {
-                long ofs = (long)page.Address.PageIndex * PageSize;
-                if ((ofs + PageSize - 1) >= _stream.Length)
-                {
-                    throw new PageIoWriteOutOfRangeException(page.Address);
-                }
-                if (page.PageData == null)
-                {
+                        }
+                        catch (Exception e)
+                        {
+                            throw new PageIoWriteException(e.Message, e, page.Address);
+                        }
+                    }
+                    if (page.PageData.Length != PageSize)
+                    {
+                        throw new PageIoWriteInvalidDataException(string.Format(PageIoWriteInvalidDataException.PageDataInvalidSize, PageSize), page.Address);
+                    }
                     try
                     {
-
+                        await _stream.WriteAsync(page.PageData, 0, (int)PageSize);
                     }
                     catch (Exception e)
                     {
                         throw new PageIoWriteException(e.Message, e, page.Address);
                     }
                 }
-                if (page.PageData.Length != PageSize)
-                {
-                    throw new PageIoWriteInvalidDataException(string.Format(PageIoWriteInvalidDataException.PageDataInvalidSize, PageSize), page.Address);
-                }
-                try
-                {
-                    await _stream.WriteAsync(page.PageData, 0, (int)PageSize);
-                }
-                catch (Exception e)
-                {
-                    throw new PageIoWriteException(e.Message, e, page.Address);
-                }
+            }
+            finally
+            {
+                _lock.Release();
             }
         }
     }
