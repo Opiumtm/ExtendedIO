@@ -7,7 +7,7 @@ namespace Ipatov.CoreDb.Core
     /// <summary>
     /// Support of page locking.
     /// </summary>
-    public class PageLockingBehavior : PagingRangeBehavior
+    public class PageLockingBehavior : PagingRangeBehavior, IPageLockingBehavior
     {
         /// <summary>
         /// Locking provider.
@@ -100,5 +100,10 @@ namespace Ipatov.CoreDb.Core
                 await base.AllocatePages(newSize);
             }
         }
+
+        /// <summary>
+        /// Locking provider.
+        /// </summary>
+        IPageLockProvider IPageLockingBehavior.LockProvider => LockProvider;
     }
 }
