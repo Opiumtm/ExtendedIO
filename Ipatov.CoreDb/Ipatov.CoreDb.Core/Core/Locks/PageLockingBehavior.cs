@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Ipatov.CoreDb.Core
+namespace Ipatov.CoreDb.Core.Locks
 {
     /// <summary>
     /// Support of page locking.

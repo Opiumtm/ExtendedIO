@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Ipatov.CoreDb.Core
+namespace Ipatov.CoreDb.Core.Locks
 {
     /// <summary>
     /// Page lock provider.

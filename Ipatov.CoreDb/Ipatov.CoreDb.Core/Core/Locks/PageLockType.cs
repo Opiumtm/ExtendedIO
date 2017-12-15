@@ -1,4 +1,4 @@
-﻿namespace Ipatov.CoreDb.Core
+﻿namespace Ipatov.CoreDb.Core.Locks
 {
     /// <summary>
     /// Page lock type.
