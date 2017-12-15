@@ -123,14 +123,8 @@ namespace Ipatov.CoreDb.Core
                     }
                     if (page.PageData == null)
                     {
-                        try
-                        {
-
-                        }
-                        catch (Exception e)
-                        {
-                            throw new PageIoWriteException(e.Message, e, page.Address);
-                        }
+                        // don't support page deallocate
+                        continue;
                     }
                     if (page.PageData.Length != PageSize)
                     {
@@ -145,6 +139,7 @@ namespace Ipatov.CoreDb.Core
                         throw new PageIoWriteException(e.Message, e, page.Address);
                     }
                 }
+                Interlocked.Exchange(ref _totalPages, (int)(_stream.Length / PageSize));
             }
             finally
             {
